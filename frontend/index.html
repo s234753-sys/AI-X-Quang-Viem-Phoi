@@ -600,7 +600,7 @@
             
             try {
                 const currentUser = localStorage.getItem('currentUser');
-                const response = await fetch(`https://older-miki-allodially.ngrok-free.dev/history/${currentUser}`);
+                const response = await fetch(`https://phuoctule-ai-x-quang-viem-phoi.hf.space/history/${currentUser}`);
                 const data = await response.json();
                 
                 if (data.length === 0) {
@@ -676,7 +676,7 @@
             this.disabled = true;
 
             try {
-                const response = await fetch(`https://older-miki-allodially.ngrok-free.dev/history/${recordToDeleteId}`, { method: 'DELETE' });
+                const response = await fetch(`https://phuoctule-ai-x-quang-viem-phoi.hf.space/history/${recordToDeleteId}`, { method: 'DELETE' });
                 
                 if (response.ok) {
                     closeDeleteModal();
@@ -711,7 +711,7 @@
                 const username = inputs[0].value; const password = inputs[1].value;
                 if (!username || !password) { alert(currentLang === 'en' ? "⚠️ Please fill in all fields!" : "⚠️ Vui lòng điền đầy đủ thông tin!"); return; }
                 const formData = new FormData(); formData.append("username", username); formData.append("password", password);
-                const response = await fetch('https://older-miki-allodially.ngrok-free.dev/login/', { method: 'POST', body: formData });
+                const response = await fetch('https://phuoctule-ai-x-quang-viem-phoi.hf.space/login/', { method: 'POST', body: formData });
                 const data = await response.json();
                 if (response.ok) {
                     localStorage.setItem('currentUser', data.username); closeModal(); 
@@ -728,7 +728,7 @@
                 if (!inputs[0].value || !inputs[1].value || !inputs[2].value) { alert("⚠️ Check inputs!"); return; }
                 if (inputs[2].value !== inputs[3].value) { alert("❌ Passwords do not match!"); return; }
                 const formData = new FormData(); formData.append("fullname", inputs[0].value); formData.append("username", inputs[1].value); formData.append("password", inputs[2].value);
-                const response = await fetch('https://older-miki-allodially.ngrok-free.dev/register/', { method: 'POST', body: formData });
+                const response = await fetch('https://phuoctule-ai-x-quang-viem-phoi.hf.space/register/', { method: 'POST', body: formData });
                 const data = await response.json();
                 if (response.ok) { alert("🎉 Success!"); toggleAuthForm('login'); } else { alert("❌ Lỗi: " + data.detail); }
             } catch (error) { alert("⚠️ Backend offline!"); }
@@ -787,7 +787,7 @@
                 const aiThreshold = localStorage.getItem('ai_threshold') || 75; formData.append('threshold', aiThreshold);
                 
                 try {
-                    const response = await fetch('https://older-miki-allodially.ngrok-free.dev/predict/', { method: 'POST', body: formData });
+                    const response = await fetch('https://phuoctule-ai-x-quang-viem-phoi.hf.space/predict/', { method: 'POST', body: formData });
                     const data = await response.json(); resultBox.style.display = 'block';
                     
                     if (data.prediction === "Viêm phổi") {
@@ -835,7 +835,7 @@
             const toast = document.getElementById("customToast");
             document.getElementById("toastMsg").innerHTML = currentLang==='en'?"Generating Excel file...":"Đang tạo file Excel...";
             toast.className = "show"; setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
-            window.location.href = `https://older-miki-allodially.ngrok-free.dev/export-excel/${currentUser}`;
+            window.location.href = `https://phuoctule-ai-x-quang-viem-phoi.hf.space/export-excel/${currentUser}`;
         }
 
         // Khởi động Dịch thuật & Check Login khi load trang
