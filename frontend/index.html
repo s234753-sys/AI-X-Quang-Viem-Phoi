@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PneumoScan AI - Hệ thống phân tích X-Quang</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* --- BẢNG MÀU Y TẾ --- */
+        :root {
+            --bg-color: #02457A; 
+            --text-color: #ffffff;
+            --text-muted: #bce3fb;
+            --card-bg: rgba(0, 0, 0, 0.25);
+            --primary-color: #00e5ff;
+            --secondary-color: #48cae4; 
+            --border-color: rgba(255, 255, 255, 0.15);
+            --glow: rgba(0, 229, 255, 0.3);
+        }
+
+        body.light-mode {
+            --bg-color: #bce3fb; 
+            --text-color: #012a4a;
+            --text-muted: #02457A;
+            --card-bg: rgba(255, 255, 255, 0.6);
+            --border-color: rgba(2, 69, 122, 0.15);
+            --glow: rgba(255, 255, 255, 0.5);
+        }
+
+        body {
+            background-color: var(--bg-color); color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0; padding: 0; transition: all 0.5s ease;
+            background-image: radial-gradient(circle at 50% 0%, var(--glow) 0%, transparent 60%);
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+        }
+
+        /* --- HEADER NGANG --- */
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 30px; border-bottom: 1px solid var(--border-color);
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            background: rgba(2, 69, 122, 0.5); z-index: 100; flex-shrink: 0;
+        }
+        body.light-mode header { background: rgba(255, 255, 255, 0.7); }
+        
+        .logo { font-size: 22px; font-weight: bold; display: flex; align-items: center; gap: 8px;}
+        .logo-text { background: linear-gradient(to right, var(--primary-color), #ffffff); -webkit-background-clip: text; color: transparent; }
+        body.light-mode .logo-text { background: linear-gradient(to right, #02457A, #0077b6); -webkit-background-clip: text; color: transparent; }
+        
+        .nav-actions { display: flex; align-items: center; gap: 15px; }
+        .theme-toggle { background: rgba(255,255,255,0.1); border: 1px solid var(--border-color); width: 38px; height: 38px; border-radius: 50%; font-size: 16px; cursor: pointer; color: var(--text-color); transition: 0.3s;}
+        .theme-toggle:hover { background: rgba(255,255,255,0.2); transform: scale(1.1);}
+        
+        .btn-login { background: transparent; border: 1px solid var(--border-color); color: var(--text-color); padding: 8px 18px; border-radius: 25px; cursor: pointer; transition: 0.3s; font-weight: 500;}
+        .btn-login:hover { background: rgba(255,255,255,0.1); transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0, 229, 255, 0.4); color: var(--primary-color); border-color: var(--primary-color);}
+
+        /* --- NÚT ĐĂNG XUẤT --- */
+        .btn-logout { background: transparent; border: 1px solid #ef4444; color: #ef4444; padding: 8px 18px; border-radius: 25px; cursor: pointer; transition: 0.3s; font-weight: 500; display: none; }
+        .btn-logout:hover { background: rgba(239, 68, 68, 0.1); box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4); transform: translateY(-3px); }
+
+        /* --- DASHBOARD & SIDEBAR --- */
+        .dashboard-wrapper { display: flex; flex: 1; overflow: hidden; }
+
+        .sidebar {
+            width: 250px; background: rgba(0, 0, 0, 0.15); border-right: 1px solid var(--border-color);
+            display: flex; flex-direction: column; padding-top: 20px; flex-shrink: 0;
+            transition: width 0.3s ease; overflow: hidden; white-space: nowrap;
+        }
+        .sidebar.collapsed { width: 80px; }
+        
+        .sidebar-nav { padding: 0 15px; flex: 1; }
+        .nav-item {
+            padding: 14px 20px; margin-bottom: 8px; border-radius: 12px; cursor: pointer; 
+            color: var(--text-muted); transition: 0.3s; display: flex; align-items: center; gap: 12px; font-weight: 500;
+        }
+        .nav-item i { font-size: 18px; width: 20px; text-align: center; margin: 0; }
+        .nav-item:hover, .nav-item.active {
+            background: var(--card-bg); color: var(--primary-color);
+            border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .sidebar.collapsed .nav-text { display: none !important; }
+        .sidebar.collapsed .nav-item { padding: 14px 0; justify-content: center; }
+        .sidebar.collapsed .nav-item i { margin: 0 !important; font-size: 24px; }
+
+        .main-content { flex: 1; overflow-y: auto; padding: 40px; scroll-behavior: smooth; }
+        .tab-content { display: none; animation: fadeIn 0.4s ease; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- NỘI DUNG CÁC TAB --- */
+        .hero { text-align: center; padding: 20px; }
+        .status-badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px; background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 30px; color: #10b981; font-size: 14px; margin-bottom: 20px; font-weight: 600;}
+        .pulse { width: 8px; height: 8px; background-color: #10b981; border-radius: 50%; animation: blink 1.5s infinite; }
+        @keyframes blink { 0% {opacity: 1;} 50% {opacity: 0.3;} 100% {opacity: 1;} }
+        
+        h1 { font-size: 46px; margin: 0 0 20px 0; line-height: 1.2; text-shadow: 0 2px 10px rgba(0,0,0,0.2);}
+        h1 span { color: var(--primary-color); }
+        body.light-mode h1 span { color: #0077b6; }
+        .subtitle { color: var(--text-muted); font-size: 16px; max-width: 650px; margin: 0 auto 40px auto; line-height: 1.6;}
+        
+        .stats { display: flex; justify-content: center; gap: 50px; margin-top: 40px; padding: 25px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; max-width: 650px; margin-left: auto; margin-right: auto; }
+        .stat-item h3 { margin: 0; font-size: 32px; color: var(--primary-color); }
+        body.light-mode .stat-item h3 { color: #02457A; }
+        .stat-item p { margin: 5px 0 0 0; color: var(--text-muted); font-size: 14px; text-transform: uppercase; font-weight: 600;}
+
+        .btn-primary { background: linear-gradient(135deg, var(--secondary-color), var(--primary-color)); color: #012a4a; border: none; padding: 12px 28px; border-radius: 25px; cursor: pointer; font-weight: bold; transition: 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.2); font-size: 16px;}
+        body.light-mode .btn-primary { color: #ffffff; background: linear-gradient(135deg, #02457A, #0077b6); }
+        .btn-primary:hover { transform: translateY(-5px) scale(1.03); box-shadow: 0 10px 30px rgba(0, 229, 255, 0.6); }
+
+        .app-container { max-width: 550px; margin: 0 auto; padding: 30px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 24px; text-align: center;}
+        .upload-box { border: 2px dashed var(--primary-color); padding: 40px 20px; border-radius: 16px; cursor: pointer; transition: 0.3s; margin-bottom: 25px; background: rgba(255, 255, 255, 0.05); display: block;}
+        body.light-mode .upload-box { border-color: #02457A; }
+        .upload-box:hover { background: rgba(255, 255, 255, 0.1); border-color: var(--secondary-color); transform: translateY(-8px) scale(1.02); box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), 0 0 25px rgba(0, 229, 255, 0.5); animation: borderPulse 2s infinite;}
+        .upload-icon { font-size: 40px; margin-bottom: 10px; color: var(--primary-color); }
+        input[type="file"] { display: none; }
+        #preview { max-width: 100%; border-radius: 12px; display: none; margin: 0 auto;}
+        
+        select { width: 100%; padding: 14px; margin-bottom: 20px; border-radius: 12px; background: rgba(0,0,0,0.2); color: var(--text-color); border: 1px solid var(--border-color); font-size: 15px; outline: none;}
+        body.light-mode select { background: rgba(255,255,255,0.8); color: #012a4a; }
+        .btn-full { width: 100%; }
+
+        #resultBox { margin-top: 25px; padding: 25px; border-radius: 16px; display: none; text-align: left; border: 1px solid var(--border-color); background: var(--card-bg);}
+        .warning { border-left: 5px solid #ef4444 !important; }
+        .warning h3 { color: #ef4444; margin-top: 0;}
+        .safe { border-left: 5px solid #10b981 !important; }
+        .safe h3 { color: #10b981; margin-top: 0;}
+
+        /* --- MODAL --- */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(8px);}
+        .modal-content { background: var(--bg-color); padding: 40px; border-radius: 24px; width: 380px; border: 1px solid var(--border-color); position: relative; text-align: center;}
+        .close-btn { position: absolute; top: 15px; right: 20px; font-size: 28px; cursor: pointer; color: var(--text-muted);}
+        .modal input { width: 100%; padding: 14px; margin-bottom: 15px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color); box-sizing: border-box;}
+        
+        /* --- NÚT ĐĂNG NHẬP GOOGLE --- */
+        .auth-divider { text-align: center; margin: 20px 0; position: relative; }
+        .auth-divider::before { content: ""; position: absolute; left: 0; top: 50%; width: 40%; height: 1px; background: var(--border-color); }
+        .auth-divider::after { content: ""; position: absolute; right: 0; top: 50%; width: 40%; height: 1px; background: var(--border-color); }
+        .auth-divider span { color: var(--text-muted); font-size: 12px; font-weight: bold; }
+
+        .btn-google { background: #ffffff; color: #444; border: 1px solid #ddd; padding: 12px 28px; border-radius: 25px; cursor: pointer; font-weight: bold; transition: 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-top: 5px; display: flex; align-items: center; justify-content: center; gap: 10px;}
+        .btn-google:hover { background: #f8f9fa; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(255,255,255,0.2); }
+        .btn-google i { color: #DB4437; font-size: 18px;}
+        
+        /* --- THÔNG BÁO TOAST XỊN XÒ --- */
+        #customToast {
+            visibility: hidden; min-width: 250px; background: var(--card-bg); border: 1px solid var(--primary-color);
+            color: var(--text-color); text-align: left; border-radius: 12px; padding: 16px 20px; position: fixed; z-index: 9999;
+            right: 20px; top: 20px; font-size: 15px; font-weight: 500; box-shadow: 0 10px 30px rgba(0, 229, 255, 0.2);
+            transform: translateX(120%); transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55), visibility 0.4s;
+            backdrop-filter: blur(10px); display: flex; align-items: center; gap: 15px;
+        }
+        #customToast.show { visibility: visible; transform: translateX(0); }
+        
+        /* --- NÚT SETTING GRID --- */
+        .settings-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        .set-btn { background: var(--card-bg); padding: 25px; border-radius: 16px; border: 2px solid var(--border-color); transition: all 0.3s ease; text-align: left; cursor: pointer; display: flex; flex-direction: column; color: var(--text-color); outline: none; }
+        .set-btn:hover { transform: translateY(-5px); border-color: var(--primary-color); box-shadow: 0 10px 25px rgba(0, 229, 255, 0.15); background: rgba(255, 255, 255, 0.05); }
+        .set-btn.no-hover:hover { transform: none; cursor: default; border-color: var(--border-color); box-shadow: none; background: var(--card-bg); }
+        .icon-box { width: 50px; height: 50px; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 24px; margin-bottom: 15px; }
+    </style>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+    <div id="customToast"><i class="fa-solid fa-circle-check" style="color: #10b981; font-size: 24px;"></i> <span id="toastMsg"></span></div>
+    
+    <header>
+        <div class="logo">
+            <button id="sidebarToggle" class="theme-toggle" style="margin-right: 15px;"><i class="fa-solid fa-bars"></i></button>
+            <span class="logo-icon">🫁</span>
+            <span class="logo-text">PneumoScan.AI</span>
+        </div>
+        <div class="nav-actions">
+            <button class="theme-toggle" id="themeBtn" title="Giao diện">☀️</button>
+            <button class="btn-login" id="btnLogin" onclick="openModal()"><i class="fa-solid fa-user"></i> Đăng nhập</button>
+            <button class="btn-logout" id="btnLogout" onclick="logoutSystem()"><i class="fa-solid fa-right-from-bracket"></i> Đăng xuất</button>
+        </div>
+    </header>
+
+    <div class="dashboard-wrapper">
+        <aside class="sidebar">
+            <nav class="sidebar-nav">
+                <div class="nav-item active" onclick="switchTab(event, 'home')">
+                    <i class="fa-solid fa-chart-pie"></i> <span class="nav-text">Tổng quan</span>
+                </div>
+                <div class="nav-item" onclick="switchTab(event, 'scan')">
+                    <i class="fa-solid fa-microscope"></i> <span class="nav-text">Phân tích AI</span>
+                </div>
+                <div class="nav-item" onclick="switchTab(event, 'history')">
+                    <i class="fa-solid fa-folder-open"></i> <span class="nav-text">Lịch sử bệnh án</span>
+                </div>
+                <div class="nav-item" onclick="switchTab(event, 'settings')">
+                    <i class="fa-solid fa-gear"></i> <span class="nav-text">Cài đặt hệ thống</span>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <section id="tab-home" class="tab-content active">
+                <div class="hero">
+                    <div class="status-badge">
+                        <div class="pulse"></div> Máy chủ DenseNet Đang Hoạt Động
+                    </div>
+                    <h1>Chẩn đoán <span>X-Quang Phổi</span><br>Tự Động Bằng AI</h1>
+                    <p class="subtitle">Ứng dụng công nghệ Deep Learning tiên tiến vào y tế. Hỗ trợ tầm soát nhanh dấu hiệu Viêm phổi chỉ trong 2 giây.</p>
+                    <button class="btn-primary" onclick="document.querySelectorAll('.nav-item')[1].click()"><i class="fa-solid fa-stethoscope"></i> Bắt đầu quét ngay</button>
+                    <div class="stats">
+                        <div class="stat-item"><h3>89.5%</h3><p>Độ chính xác</p></div>
+                        <div class="stat-item"><h3>5.800+</h3><p>Mẫu huấn luyện</p></div>
+                        <div class="stat-item"><h3>< 2s</h3><p>Tốc độ phản hồi</p></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="tab-scan" class="tab-content">
+                <div class="app-container">
+                    <h2 style="margin-top: 0;">Tải dữ liệu hình ảnh</h2>
+                    <p style="color: var(--text-muted); margin-bottom: 25px; font-size: 14px;">Hỗ trợ định dạng JPG, PNG.</p>
+                    
+                    <form id="aiForm">
+                        <label class="upload-box" for="fileInput">
+                            <div id="uploadText">
+                                <div class="upload-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+                                <div style="font-weight: bold; margin-bottom: 5px;">Kéo thả hoặc Nhấn để tải ảnh</div>
+                            </div>
+                            <img id="preview" src="" alt="Ảnh X-Quang">
+                        </label>
+                        <input type="file" id="fileInput" accept="image/*" required>
+
+                        <input type="text" id="patientName" placeholder="Tên bệnh nhân (Ví dụ: Nguyễn Văn A)" style="width: 100%; padding: 14px; margin-bottom: 20px; border-radius: 12px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.2); color: var(--text-color); font-size: 15px; outline: none;" required>
+
+                        <select id="genderInput">
+                            <option value="Nam">👤 Thông tin bệnh nhân: Nam</option>
+                            <option value="Nữ">👩 Thông tin bệnh nhân: Nữ</option>
+                        </select>
+
+                        <button type="submit" class="btn-primary btn-full" id="submitBtn"><i class="fa-solid fa-magnifying-glass"></i> Bắt đầu Phân tích AI</button>
+                    </form>
+
+                    <div id="resultBox">
+                        <h3 id="resTitle"></h3>
+                        <p style="margin-bottom: 8px;"><span id="resConfidenceLabel">Độ tin cậy:</span> <span id="resConfidence" style="font-size: 18px; color: var(--primary-color);"></span></p>
+                        <p style="margin-top: 0;"><span id="resAdviceLabel">Khuyến nghị:</span> <span id="resAdvice"></span></p>
+                        <img id="heatmapImage" src="" style="display:none; width: 100%; border-radius: 8px; margin-top: 15px; border: 2px solid #ef4444;">
+                    </div>
+                </div>
+            </section>
+
+            <section id="tab-history" class="tab-content">
+                <div style="background: var(--card-bg); padding: 30px; border-radius: 20px; border: 1px solid var(--border-color);">
+                    <h2 style="margin-top: 0; border-bottom: 1px solid var(--border-color); padding-bottom: 15px;">Lịch sử chẩn đoán</h2>
+                    <div style="text-align: center; padding: 50px 0; color: var(--text-muted);">
+                        <i class="fa-solid fa-box-open" style="font-size: 48px; margin-bottom: 15px; opacity: 0.5;"></i>
+                        <p>Hệ thống Database đang được thiết lập.<br>Danh sách bệnh nhân sẽ hiển thị tại đây.</p>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="tab-settings" class="tab-content">
+                <div style="background: var(--card-bg); padding: 30px; border-radius: 20px; border: 1px solid var(--border-color);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 25px;">
+                        <h2 style="margin: 0;">Cài đặt hệ thống</h2>
+                        <span style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 5px 15px; border-radius: 20px; font-size: 13px; font-weight: bold; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3);"><i class="fa-solid fa-rocket"></i> Tính năng Phiên bản 2.0</span>
+                    </div>
+
+                    <div class="settings-grid">
+                        <div class="set-btn no-hover">
+                            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                                <div class="icon-box" style="background: rgba(0, 229, 255, 0.1); color: var(--primary-color); margin: 0;"><i class="fa-solid fa-sliders"></i></div>
+                                <h3 style="margin: 0; font-size: 18px;">1. Độ nhạy AI</h3>
+                            </div>
+                            <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; flex: 1;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                    <label style="font-size: 13px; color: var(--text-muted);">Ngưỡng tin cậy:</label>
+                                    <span id="thresholdVal" style="color: var(--primary-color); font-weight: bold;">75%</span>
+                                </div>
+                                <input type="range" id="thresholdInput" min="50" max="95" value="75" style="width: 100%; accent-color: var(--primary-color); cursor: pointer;">
+                                <p id="thresholdDesc" style="font-size: 12px; color: rgba(255,255,255,0.4); font-style: italic; margin: 10px 0 0 0;">* Hiện tại: AI cần độ tin cậy trên 75% mới khẳng định "Viêm phổi".</p>
+                            </div>
+                        </div>
+
+                        <button class="set-btn" onclick="openHospitalModal()">
+                            <div class="icon-box" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;"><i class="fa-solid fa-hospital-user"></i></div>
+                            <h3 style="margin: 0 0 10px 0; font-size: 18px;">2. Mạng lưới Y tế</h3>
+                            <p style="font-size: 13.5px; color: var(--text-muted); line-height: 1.5; margin: 0;">Đề xuất phòng khám chuyên khoa hô hấp uy tín gần nhất cho bệnh nhân.</p>
+                        </button>
+
+                        <button class="set-btn" onclick="exportExcel()">
+                            <div class="icon-box" style="background: rgba(16, 185, 129, 0.1); color: #10b981;"><i class="fa-solid fa-file-excel"></i></div>
+                            <h3 style="margin: 0 0 10px 0; font-size: 18px;">3. Trích xuất Dữ liệu</h3>
+                            <p style="font-size: 13.5px; color: var(--text-muted); line-height: 1.5; margin: 0;">Xuất toàn bộ lịch sử bệnh án ra file Excel (.csv) để báo cáo.</p>
+                        </button>
+
+                        <button class="set-btn" onclick="toggleLanguage()">
+                            <div class="icon-box" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;"><i class="fa-solid fa-language"></i></div>
+                            <h3 id="langTitle" style="margin: 0 0 10px 0; font-size: 18px;">4. Đa Ngôn ngữ (VI)</h3>
+                            <p id="langDesc" style="font-size: 13.5px; color: var(--text-muted); line-height: 1.5; margin: 0;">Chuyển đổi Anh/Việt và tùy biến giao diện Không gian làm việc.</p>
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="authModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <i class="fa-solid fa-hospital" style="font-size: 40px; color: var(--primary-color); margin-bottom: 10px;"></i>
+            <h2 id="modalTitle" style="margin: 0 0 5px 0;">Cổng Y Tế</h2>
+            <p id="modalSubtitle" style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px;">Đăng nhập để quản lý kết quả X-Quang</p>
+            
+            <div id="loginForm">
+                <input type="text" placeholder="Tên đăng nhập" required>
+                <input type="password" placeholder="Mật khẩu" required>
+                <button class="btn-primary btn-full" onclick="mockLogin()">Đăng nhập Hệ thống</button>
+                
+                <div class="auth-divider"><span>HOẶC</span></div>
+                <div style="display: flex; justify-content: center; margin-top: 15px;">
+                    <div id="g_id_onload" data-client_id="822613261824-vsqj1q61j37p107pc8693hbuuqca992r.apps.googleusercontent.com" data-context="signin" data-ux_mode="popup" data-callback="handleGoogleLogin" data-auto_prompt="false"></div>
+                    <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="filled_black" data-text="signin_with" data-size="large" data-logo_alignment="left"></div>
+                </div>
+                <p style="text-align: center; margin-top: 20px; font-size: 14px; color: var(--text-muted);">
+                    Chưa có tài khoản? <a href="#" onclick="toggleAuthForm('register')" style="font-weight: bold; text-decoration: none; color: var(--primary-color);">Đăng ký ngay</a>
+                </p>
+            </div>
+
+            <div id="registerForm" style="display: none;">
+                <input type="text" placeholder="Họ và Tên" required>
+                <input type="text" placeholder="Tên đăng nhập" required>
+                <input type="password" placeholder="Mật khẩu" required>
+                <input type="password" placeholder="Xác nhận mật khẩu" required>
+                <button class="btn-primary btn-full" onclick="mockRegister()" style="background: linear-gradient(135deg, #10b981, #059669); color: white;">Tạo Tài Khoản</button>
+                <p style="text-align: center; margin-top: 20px; font-size: 14px; color: var(--text-muted);">
+                    Đã có tài khoản? <a href="#" onclick="toggleAuthForm('login')" style="font-weight: bold; text-decoration: none; color: var(--primary-color);">Đăng nhập</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div id="hospitalModal" class="modal">
+        <div class="modal-content" style="width: 550px; text-align: left; padding: 30px;">
+            <span class="close-btn" onclick="closeHospitalModal()" style="top: 10px; right: 15px;">&times;</span>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="margin: 0 0 5px 0; color: var(--primary-color);"><i class="fa-solid fa-network-wired"></i> Mạng Lưới Y Tế Toàn Quốc</h2>
+                <p style="color: var(--text-muted); font-size: 14px; margin: 0;">Tra cứu nhanh cơ sở chuyên khoa hô hấp tuyến đầu</p>
+            </div>
+            <input type="text" id="searchHospital" onkeyup="filterHospitals()" placeholder="🔍 Nhập tên Tỉnh/Thành phố hoặc Bệnh viện..." style="width: 100%; padding: 12px 15px; margin-bottom: 15px; border-radius: 10px; border: 1px solid var(--primary-color); background: rgba(0,0,0,0.3); color: white; font-size: 14px; outline: none; box-sizing: border-box;">
+            <div id="hospitalList" style="max-height: 300px; overflow-y: auto; padding-right: 10px;">
+                <div class="h-item" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); border-left: 4px solid #ef4444; margin-bottom: 12px;">
+                    <h4 style="margin: 0 0 5px 0; color: var(--primary-color); font-size: 15px;">🏥 Bệnh viện Lao và Bệnh phổi TP. Cần Thơ</h4>
+                    <p style="margin: 0 0 3px 0; font-size: 13px; color: var(--text-muted);"><i class="fa-solid fa-location-dot" style="width: 15px;"></i> Cần Thơ - QL91, Phường Phước Thới, Ô Môn</p>
+                    <p style="margin: 0; font-size: 13px; color: #10b981; font-weight: bold;"><i class="fa-solid fa-phone" style="width: 15px;"></i> Đặt lịch: 0292 3861 772</p>
+                </div>
+                <div class="h-item" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); border-left: 4px solid #ef4444; margin-bottom: 12px;">
+                    <h4 style="margin: 0 0 5px 0; color: var(--primary-color); font-size: 15px;">🏥 Bệnh viện Đa khoa Trung ương Cần Thơ</h4>
+                    <p style="margin: 0 0 3px 0; font-size: 13px; color: var(--text-muted);"><i class="fa-solid fa-location-dot" style="width: 15px;"></i> Cần Thơ - 315 Nguyễn Văn Linh, Ninh Kiều</p>
+                    <p style="margin: 0; font-size: 13px; color: #10b981; font-weight: bold;"><i class="fa-solid fa-phone" style="width: 15px;"></i> Cấp cứu: 0901 215 115</p>
+                </div>
+                <div class="h-item" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); border-left: 4px solid #f59e0b; margin-bottom: 12px;">
+                    <h4 style="margin: 0 0 5px 0; color: var(--primary-color); font-size: 15px;">🏥 Bệnh viện Phạm Ngọc Thạch</h4>
+                    <p style="margin: 0 0 3px 0; font-size: 13px; color: var(--text-muted);"><i class="fa-solid fa-location-dot" style="width: 15px;"></i> TP.HCM - 120 Hồng Bàng, Phường 12, Quận 5</p>
+                    <p style="margin: 0; font-size: 13px; color: #10b981; font-weight: bold;"><i class="fa-solid fa-phone" style="width: 15px;"></i> Đặt lịch: 028 3855 0207</p>
+                </div>
+                <div class="h-item" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); border-left: 4px solid #f59e0b; margin-bottom: 12px;">
+                    <h4 style="margin: 0 0 5px 0; color: var(--primary-color); font-size: 15px;">🏥 Bệnh viện Chợ Rẫy (Khoa Hô hấp)</h4>
+                    <p style="margin: 0 0 3px 0; font-size: 13px; color: var(--text-muted);"><i class="fa-solid fa-location-dot" style="width: 15px;"></i> TP.HCM - 201B Nguyễn Chí Thanh, Quận 5</p>
+                    <p style="margin: 0; font-size: 13px; color: #10b981; font-weight: bold;"><i class="fa-solid fa-phone" style="width: 15px;"></i> Cấp cứu: 028 3855 4137</p>
+                </div>
+                <div class="h-item" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); border-left: 4px solid #a855f7; margin-bottom: 12px;">
+                    <h4 style="margin: 0 0 5px 0; color: var(--primary-color); font-size: 15px;">🏥 Bệnh viện Phổi Đà Nẵng</h4>
+                    <p style="margin: 0 0 3px 0; font-size: 13px; color: var(--text-muted);"><i class="fa-solid fa-location-dot" style="width: 15px;"></i> Đà Nẵng - Phước Lý, Phường Hòa Minh, Liên Chiểu</p>
+                    <p style="margin: 0; font-size: 13px; color: #10b981; font-weight: bold;"><i class="fa-solid fa-phone" style="width: 15px;"></i> Đặt lịch: 0236 3842 544</p>
+                </div>
+                <div class="h-item" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); border-left: 4px solid #a855f7; margin-bottom: 12px;">
+                    <h4 style="margin: 0 0 5px 0; color: var(--primary-color); font-size: 15px;">🏥 Bệnh viện Trung ương Huế</h4>
+                    <p style="margin: 0 0 3px 0; font-size: 13px; color: var(--text-muted);"><i class="fa-solid fa-location-dot" style="width: 15px;"></i> Thừa Thiên Huế - 16 Lê Lợi, TP. Huế</p>
+                    <p style="margin: 0; font-size: 13px; color: #10b981; font-weight: bold;"><i class="fa-solid fa-phone" style="width: 15px;"></i> Đặt lịch: 0234 3822 325</p>
+                </div>
+                <div class="h-item" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); border-left: 4px solid #3b82f6; margin-bottom: 12px;">
+                    <h4 style="margin: 0 0 5px 0; color: var(--primary-color); font-size: 15px;">🏥 Bệnh viện Phổi Trung ương</h4>
+                    <p style="margin: 0 0 3px 0; font-size: 13px; color: var(--text-muted);"><i class="fa-solid fa-location-dot" style="width: 15px;"></i> Hà Nội - 463 Hoàng Hoa Thám, Ba Đình</p>
+                    <p style="margin: 0; font-size: 13px; color: #10b981; font-weight: bold;"><i class="fa-solid fa-phone" style="width: 15px;"></i> Đặt lịch: 024 3832 6249</p>
+                </div>
+                <div class="h-item" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); border-left: 4px solid #3b82f6; margin-bottom: 12px;">
+                    <h4 style="margin: 0 0 5px 0; color: var(--primary-color); font-size: 15px;">🏥 Bệnh viện Bạch Mai (Trung tâm Hô hấp)</h4>
+                    <p style="margin: 0 0 3px 0; font-size: 13px; color: var(--text-muted);"><i class="fa-solid fa-location-dot" style="width: 15px;"></i> Hà Nội - 78 Giải Phóng, Phương Mai, Đống Đa</p>
+                    <p style="margin: 0; font-size: 13px; color: #10b981; font-weight: bold;"><i class="fa-solid fa-phone" style="width: 15px;"></i> Đặt lịch: 024 3869 3731</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="deleteConfirmModal" class="modal">
+        <div class="modal-content" style="width: 350px; text-align: center; padding: 30px;">
+            <div style="background: rgba(239, 68, 68, 0.1); width: 70px; height: 70px; border-radius: 50%; display: inline-flex; justify-content: center; align-items: center; margin-bottom: 20px;">
+                <i class="fa-solid fa-triangle-exclamation" style="font-size: 30px; color: #ef4444;"></i>
+            </div>
+            <h3 id="delModalTitle" style="margin: 0 0 10px 0; font-size: 20px;">Xóa Bệnh Án?</h3>
+            <p id="delModalDesc" style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px; line-height: 1.5;">Hành động này không thể hoàn tác. Dữ liệu sẽ bị xóa vĩnh viễn khỏi két sắt.</p>
+            
+            <div style="display: flex; gap: 15px;">
+                <button onclick="closeDeleteModal()" style="flex: 1; padding: 12px; background: transparent; border: 1px solid var(--border-color); color: var(--text-color); border-radius: 10px; cursor: pointer; font-weight: bold; transition: 0.3s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'" id="btnCancelDel">Hủy</button>
+                
+                <button id="btnConfirmDel" style="flex: 1; padding: 12px; background: #ef4444; border: none; color: white; border-radius: 10px; cursor: pointer; font-weight: bold; transition: 0.3s; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">Xóa ngay</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // --- 1. TỪ ĐIỂN ĐA NGÔN NGỮ TỐI THƯỢNG ---
+        // ==========================================
+        let currentLang = localStorage.getItem('app_lang') || 'vi';
+
+        const dict = {
+            'vi': {
+                'nav-home': 'Tổng quan', 'nav-scan': 'Phân tích AI', 'nav-hist': 'Lịch sử bệnh án', 'nav-set': 'Cài đặt hệ thống',
+                'hero-title': 'Chẩn đoán <span>X-Quang Phổi</span><br>Tự Động Bằng AI',
+                'hero-sub': 'Ứng dụng công nghệ Deep Learning tiên tiến vào y tế. Hỗ trợ tầm soát nhanh dấu hiệu Viêm phổi chỉ trong 2 giây.',
+                'hero-btn': '<i class="fa-solid fa-stethoscope"></i> Bắt đầu quét ngay',
+                'stat-1': 'Máy chủ DenseNet Đang Hoạt Động', 'stat-2': 'Độ chính xác', 'stat-3': 'Mẫu huấn luyện', 'stat-4': 'Tốc độ phản hồi',
+                'scan-title': 'Tải dữ liệu hình ảnh', 'scan-sub': 'Hỗ trợ định dạng JPG, PNG.',
+                'scan-drop': '<div class="upload-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div><div style="font-weight: bold; margin-bottom: 5px;">Kéo thả hoặc Nhấn để tải ảnh</div>',
+                'scan-btn': '<i class="fa-solid fa-magnifying-glass"></i> Bắt đầu Phân tích AI',
+                'scan-loading': '<i class="fa-solid fa-spinner fa-spin"></i> Đang quét X-Quang...',
+                'res-sick': '<i class="fa-solid fa-triangle-exclamation"></i> Phát hiện Viêm phổi',
+                'res-adv-sick': 'Cần liên hệ chuyên khoa hô hấp để kiểm tra thêm.',
+                'res-ok': '<i class="fa-solid fa-circle-check"></i> Kết quả Bình thường',
+                'res-adv-ok': 'Không phát hiện dấu hiệu bất thường trên ảnh X-Quang.',
+                'res-lbl-conf': 'Độ tin cậy:', 'res-lbl-adv': 'Khuyến nghị:',
+                'hist-title': 'Lịch sử chẩn đoán', 'hist-lock': 'Vui lòng <b>Đăng nhập</b> để xem hồ sơ bệnh án!',
+                'hist-empty': 'Chưa có bệnh án nào trong hệ thống.', 'hist-loading': '<i class="fa-solid fa-spinner fa-spin"></i> Đang tải dữ liệu từ Két sắt...',
+                'th-patient': 'Bệnh nhân', 'th-result': 'Kết quả AI', 'th-conf': 'Độ tin cậy',
+                'set-title': 'Cài đặt hệ thống', 'set-badge': '<i class="fa-solid fa-rocket"></i> Tính năng Phiên bản 2.0',
+                'set-1': '1. Độ nhạy AI', 'set-1-lbl': 'Ngưỡng tin cậy:', 'set-1-desc': '* Hiện tại: AI cần độ tin cậy trên {val}% mới khẳng định "Viêm phổi".',
+                'set-2': '2. Mạng lưới Y tế', 'set-2-desc': 'Đề xuất phòng khám chuyên khoa hô hấp uy tín gần nhất cho bệnh nhân.',
+                'set-3': '3. Trích xuất Dữ liệu', 'set-3-desc': 'Xuất toàn bộ lịch sử bệnh án ra file Excel (.csv) để báo cáo.',
+                'lang-btn': '4. Đa Ngôn ngữ (VI)', 'lang-desc': 'Chuyển đổi Anh/Việt và tùy biến giao diện Không gian làm việc.',
+                'btn-login': '<i class="fa-solid fa-user"></i> Đăng nhập', 'btn-logout': '<i class="fa-solid fa-right-from-bracket"></i> Đăng xuất',
+                'm-hosp-title': 'Mạng Lưới Y Tế Toàn Quốc', 'm-hosp-sub': 'Tra cứu nhanh cơ sở chuyên khoa hô hấp tuyến đầu', 'm-hosp-search': '🔍 Nhập tên Tỉnh/Thành phố hoặc Bệnh viện...',
+                'm-auth-log-title': 'Cổng Y Tế', 'm-auth-log-sub': 'Đăng nhập để quản lý kết quả X-Quang', 'm-auth-log-btn': 'Đăng nhập Hệ thống',
+                'm-auth-reg-title': 'Đăng Ký Tài Khoản', 'm-auth-reg-sub': 'Tạo tài khoản mới trên hệ thống', 'm-auth-reg-btn': 'Tạo Tài Khoản',
+                'm-auth-or': 'HOẶC', 'm-auth-no': 'Chưa có tài khoản?', 'm-auth-yes': 'Đã có tài khoản?'
+            },
+            'en': {
+                'nav-home': 'Dashboard', 'nav-scan': 'AI Analysis', 'nav-hist': 'Medical History', 'nav-set': 'System Settings',
+                'hero-title': 'Automated <span>Chest X-Ray</span><br>Diagnosis by AI',
+                'hero-sub': 'Applying advanced Deep Learning technology in healthcare. Fast screening for Pneumonia signs in just 2 seconds.',
+                'hero-btn': '<i class="fa-solid fa-stethoscope"></i> Start Scanning Now',
+                'stat-1': 'DenseNet Server is Active', 'stat-2': 'Accuracy', 'stat-3': 'Training Samples', 'stat-4': 'Response Time',
+                'scan-title': 'Upload Image Data', 'scan-sub': 'Supports JPG, PNG formats.',
+                'scan-drop': '<div class="upload-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div><div style="font-weight: bold; margin-bottom: 5px;">Drag & Drop or Click to upload</div>',
+                'scan-btn': '<i class="fa-solid fa-magnifying-glass"></i> Start AI Analysis',
+                'scan-loading': '<i class="fa-solid fa-spinner fa-spin"></i> Scanning X-Ray...',
+                'res-sick': '<i class="fa-solid fa-triangle-exclamation"></i> Pneumonia Detected',
+                'res-adv-sick': 'Please consult a respiratory specialist for further examination.',
+                'res-ok': '<i class="fa-solid fa-circle-check"></i> Normal Result',
+                'res-adv-ok': 'No abnormal signs detected on the X-Ray image.',
+                'res-lbl-conf': 'Confidence:', 'res-lbl-adv': 'Advice:',
+                'hist-title': 'Diagnostic History', 'hist-lock': 'Please <b>Login</b> to view medical records!',
+                'hist-empty': 'No medical records found in the system.', 'hist-loading': '<i class="fa-solid fa-spinner fa-spin"></i> Loading data from Vault...',
+                'th-patient': 'Patient', 'th-result': 'AI Result', 'th-conf': 'Confidence',
+                'set-title': 'System Settings', 'set-badge': '<i class="fa-solid fa-rocket"></i> Version 2.0 Features',
+                'set-1': '1. AI Sensitivity', 'set-1-lbl': 'Confidence Threshold:', 'set-1-desc': '* Current: AI needs > {val}% confidence to predict "Pneumonia".',
+                'set-2': '2. Medical Network', 'set-2-desc': 'Suggest the nearest reputable respiratory clinics for patients.',
+                'set-3': '3. Data Extraction', 'set-3-desc': 'Export full medical history to Excel (.csv) for reporting.',
+                'lang-btn': '4. Languages (EN)', 'lang-desc': 'Switch English/Vietnamese interface for the Workspace.',
+                'btn-login': '<i class="fa-solid fa-user"></i> Login', 'btn-logout': '<i class="fa-solid fa-right-from-bracket"></i> Logout',
+                'm-hosp-title': 'National Medical Network', 'm-hosp-sub': 'Quick search for leading respiratory clinics', 'm-hosp-search': '🔍 Enter Province/City or Hospital name...',
+                'm-auth-log-title': 'Medical Portal', 'm-auth-log-sub': 'Login to manage X-Ray results', 'm-auth-log-btn': 'Login to System',
+                'm-auth-reg-title': 'Register Account', 'm-auth-reg-sub': 'Create a new account on the system', 'm-auth-reg-btn': 'Create Account',
+                'm-auth-or': 'OR', 'm-auth-no': 'Don\'t have an account?', 'm-auth-yes': 'Already have an account?'
+            }
+        };
+
+        function t(key) { return dict[currentLang][key]; }
+
+        function applyLanguage() {
+            // Sidebar
+            const navTexts = document.querySelectorAll('.nav-text');
+            if(navTexts.length >= 4) { navTexts[0].innerText = t('nav-home'); navTexts[1].innerText = t('nav-scan'); navTexts[2].innerText = t('nav-hist'); navTexts[3].innerText = t('nav-set'); }
+            
+            // Dashboard
+            const heroTitle = document.querySelector('.hero h1'); if(heroTitle) heroTitle.innerHTML = t('hero-title');
+            const heroSub = document.querySelector('.hero .subtitle'); if(heroSub) heroSub.innerText = t('hero-sub');
+            const heroBtn = document.querySelector('.hero .btn-primary'); if(heroBtn) heroBtn.innerHTML = t('hero-btn');
+            const statusBadge = document.querySelector('.status-badge'); if(statusBadge) statusBadge.innerHTML = `<div class="pulse"></div> ${t('stat-1')}`;
+            const stats = document.querySelectorAll('.stat-item p');
+            if(stats.length >= 3) { stats[0].innerText = t('stat-2'); stats[1].innerText = t('stat-3'); stats[2].innerText = t('stat-4'); }
+
+            // Scan
+            const scanTitle = document.querySelector('#tab-scan h2'); if(scanTitle) scanTitle.innerText = t('scan-title');
+            const scanSub = document.querySelector('#tab-scan p'); if(scanSub) scanSub.innerText = t('scan-sub');
+            const scanDrop = document.getElementById('uploadText'); if(scanDrop) scanDrop.innerHTML = t('scan-drop');
+            const submitBtn = document.getElementById('submitBtn'); if(submitBtn && !submitBtn.disabled) submitBtn.innerHTML = t('scan-btn');
+            document.getElementById('patientName').placeholder = currentLang === 'en' ? 'Patient Name (e.g., John Doe)' : 'Tên bệnh nhân (Ví dụ: Nguyễn Văn A)';
+            document.getElementById('genderInput').options[0].text = currentLang === 'en' ? '👤 Patient: Male' : '👤 Thông tin bệnh nhân: Nam';
+            document.getElementById('genderInput').options[1].text = currentLang === 'en' ? '👩 Patient: Female' : '👩 Thông tin bệnh nhân: Nữ';
+
+            // Cập nhật chữ trong Khung kết quả (nếu đang hiển thị)
+            const resConfidenceLabel = document.getElementById('resConfidenceLabel');
+            if(resConfidenceLabel) resConfidenceLabel.innerText = t('res-lbl-conf');
+            const resAdviceLabel = document.getElementById('resAdviceLabel');
+            if(resAdviceLabel) resAdviceLabel.innerText = t('res-lbl-adv');
+
+            // Settings
+            document.querySelector('#tab-settings h2').innerText = t('set-title');
+            document.querySelector('#tab-settings span').innerHTML = t('set-badge');
+            const h3s = document.querySelectorAll('.settings-grid h3');
+            if(h3s.length >= 4) {
+                h3s[0].innerHTML = `<i class="fa-solid fa-sliders"></i> ` + t('set-1'); h3s[1].innerHTML = `<i class="fa-solid fa-hospital-user"></i> ` + t('set-2');
+                h3s[2].innerHTML = `<i class="fa-solid fa-file-excel"></i> ` + t('set-3'); h3s[3].innerHTML = `<i class="fa-solid fa-language"></i> ` + t('lang-btn');
+            }
+            document.querySelector('#tab-settings label').innerText = t('set-1-lbl');
+            const setDescs = document.querySelectorAll('.settings-grid button p');
+            if(setDescs.length >= 3) { setDescs[0].innerText = t('set-2-desc'); setDescs[1].innerText = t('set-3-desc'); setDescs[2].innerText = t('lang-desc'); }
+            
+            // Text slider
+            const tInput = document.getElementById('thresholdInput');
+            if(tInput) document.getElementById('thresholdDesc').innerText = t('set-1-desc').replace('{val}', tInput.value);
+
+            // Modals & Header
+            const btnLogin = document.getElementById('btnLogin'); if(btnLogin && !btnLogin.innerText.includes('Bs.')) btnLogin.innerHTML = t('btn-login');
+            const btnLogout = document.getElementById('btnLogout'); if(btnLogout) btnLogout.innerHTML = t('btn-logout');
+            const hospTitle = document.querySelector('#hospitalModal h2'); if(hospTitle) hospTitle.innerHTML = `<i class="fa-solid fa-network-wired"></i> ` + t('m-hosp-title');
+            const hospSub = document.querySelector('#hospitalModal p'); if(hospSub) hospSub.innerText = t('m-hosp-sub');
+            const hospSearch = document.getElementById('searchHospital'); if(hospSearch) hospSearch.placeholder = t('m-hosp-search');
+            
+            // Auth Form
+            const authLogTitle = document.getElementById('modalTitle');
+            if (authLogTitle) {
+                if (document.getElementById('loginForm').style.display !== 'none') {
+                    authLogTitle.innerText = t('m-auth-log-title'); document.getElementById('modalSubtitle').innerText = t('m-auth-log-sub');
+                } else {
+                    authLogTitle.innerText = t('m-auth-reg-title'); document.getElementById('modalSubtitle').innerText = t('m-auth-reg-sub');
+                }
+                document.querySelector('#loginForm button').innerText = t('m-auth-log-btn');
+                document.querySelector('#registerForm button').innerText = t('m-auth-reg-btn');
+                const divs = document.querySelectorAll('.auth-divider span'); if(divs.length>0) divs[0].innerText = t('m-auth-or');
+                document.querySelector('#loginForm p').innerHTML = `${t('m-auth-no')} <a href="#" onclick="toggleAuthForm('register')" style="font-weight: bold; text-decoration: none; color: var(--primary-color);">${currentLang==='en'?'Register now':'Đăng ký ngay'}</a>`;
+                document.querySelector('#registerForm p').innerHTML = `${t('m-auth-yes')} <a href="#" onclick="toggleAuthForm('login')" style="font-weight: bold; text-decoration: none; color: var(--primary-color);">${currentLang==='en'?'Login':'Đăng nhập'}</a>`;
+            }
+
+            // Gọi lại bảng lịch sử nếu đang mở
+            if (document.getElementById('tab-history').classList.contains('active')) loadHistory();
+        }
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'vi' ? 'en' : 'vi';
+            localStorage.setItem('app_lang', currentLang);
+            applyLanguage();
+            const toast = document.getElementById("customToast");
+            document.getElementById("toastMsg").innerHTML = currentLang === 'vi' ? "Đã chuyển sang Tiếng Việt 🇻🇳" : "Switched to English 🇺🇸";
+            toast.className = "show"; setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
+        }
+
+        // ==========================================
+        // --- 2. GIAO DIỆN & TABS ---
+        // ==========================================
+        const themeBtn = document.getElementById('themeBtn');
+        if (themeBtn) {
+            themeBtn.addEventListener('click', () => {
+                document.body.classList.toggle('light-mode');
+                themeBtn.innerText = document.body.classList.contains('light-mode') ? '🌙' : '☀️';
+            });
+        }
+
+        function switchTab(event, tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            document.getElementById('tab-' + tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+            if (tabId === 'history') loadHistory();
+        }
+
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebar = document.querySelector('.sidebar');
+        if (sidebarToggle && sidebar) {
+            sidebarToggle.addEventListener('click', () => { sidebar.classList.toggle('collapsed'); });
+        }
+
+        // ==========================================
+        // --- 3. LỊCH SỬ BỆNH ÁN (DATABASE) ---
+        // ==========================================
+        // 3. API Rút lịch sử & DỊCH DATA TỪ BACKEND (Bản có nút Xóa)
+        async function loadHistory() {
+            const historyContainer = document.querySelector('#tab-history div');
+            const isLogged = document.getElementById('btnLogout') && document.getElementById('btnLogout').style.display === 'inline-block';
+
+            if (!isLogged) {
+                historyContainer.innerHTML = `<h2 style="margin-top: 0; border-bottom: 1px solid var(--border-color); padding-bottom: 15px;">${t('hist-title')}</h2>
+                <div style="text-align: center; padding: 50px 0; color: #ef4444;">
+                    <i class="fa-solid fa-lock" style="font-size: 48px; margin-bottom: 15px;"></i>
+                    <p style="font-size: 18px;">${t('hist-lock')}</p>
+                </div>`; return;
+            }
+
+            historyContainer.innerHTML = `<h2 style="margin-top: 0; border-bottom: 1px solid var(--border-color); padding-bottom: 15px;">${t('hist-title')}</h2><p style="text-align:center;">${t('hist-loading')}</p>`;
+            
+            try {
+                const currentUser = localStorage.getItem('currentUser');
+                const response = await fetch(`http://127.0.0.1:8000/history/${currentUser}`);
+                const data = await response.json();
+                
+                if (data.length === 0) {
+                    historyContainer.innerHTML = `<h2 style="margin-top: 0; border-bottom: 1px solid var(--border-color); padding-bottom: 15px;">${t('hist-title')}</h2><div style="text-align: center; padding: 50px 0; color: var(--text-muted);"><i class="fa-solid fa-box-open" style="font-size: 48px; margin-bottom: 15px; opacity: 0.5;"></i><p>${t('hist-empty')}</p></div>`;
+                    return;
+                }
+
+                let thAction = currentLang === 'en' ? 'Action' : 'Thao tác';
+                let tableHTML = `<table style="width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 15px;">
+                    <tr style="background: rgba(0, 0, 0, 0.4); text-align: left;">
+                        <th style="padding: 15px; border-radius: 10px 0 0 10px;">${t('th-patient')}</th>
+                        <th style="padding: 15px;">${t('th-result')}</th>
+                        <th style="padding: 15px;">${t('th-conf')}</th>
+                        <th style="padding: 15px; text-align: center; border-radius: 0 10px 10px 0;">${thAction}</th>
+                    </tr>`;
+                
+                data.forEach(record => {
+                    let isPneumonia = record.result.includes('Viêm phổi');
+                    let color = isPneumonia ? '#ef4444' : '#10b981';
+                    let icon = isPneumonia ? '<i class="fa-solid fa-triangle-exclamation"></i>' : '<i class="fa-solid fa-circle-check"></i>';
+                    
+                    let displayResult = record.result;
+                    if (currentLang === 'en') {
+                        if (isPneumonia) displayResult = 'Pneumonia';
+                        else if (record.result.includes('theo dõi')) displayResult = 'Normal (Monitor)';
+                        else displayResult = 'Normal';
+                    }
+
+                    tableHTML += `<tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 15px; font-weight: 500;">${record.patient_name}</td>
+                        <td style="padding: 15px; color: ${color}; font-weight: bold;">${icon} ${displayResult}</td>
+                        <td style="padding: 15px; color: var(--primary-color);">${record.confidence}</td>
+                        <td style="padding: 15px; text-align: center;">
+                            <button onclick="deleteRecord(${record.id})" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; padding: 6px 12px; cursor: pointer; transition: 0.3s;" onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.1)'" title="Xóa bệnh án">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>
+                    </tr>`;
+                });
+                tableHTML += `</table>`;
+                historyContainer.innerHTML = `<h2 style="margin-top: 0; border-bottom: 1px solid var(--border-color); padding-bottom: 15px;">${t('hist-title')}</h2>` + tableHTML;
+            } catch (error) {
+                historyContainer.innerHTML = `<h2 style="margin-top: 0; border-bottom: 1px solid var(--border-color); padding-bottom: 15px;">${t('hist-title')}</h2><p style="color: #ef4444; text-align:center;">⚠️ Lỗi kết nối Backend!</p>`;
+            }
+        }
+        // --- HÀM THỰC THI LỆNH XÓA (GIAO DIỆN XỊN) ---
+        let recordToDeleteId = null;
+
+        function closeDeleteModal() {
+            document.getElementById('deleteConfirmModal').style.display = 'none';
+            recordToDeleteId = null;
+        }
+
+        // Bấm nút thùng rác thì gọi bảng này ra (Có tích hợp Đa Ngôn Ngữ luôn)
+        function deleteRecord(id) {
+            recordToDeleteId = id;
+            
+            document.getElementById('delModalTitle').innerText = currentLang === 'en' ? 'Delete Record?' : 'Xóa Bệnh Án?';
+            document.getElementById('delModalDesc').innerText = currentLang === 'en' ? 'This action cannot be undone. Data will be permanently removed from the vault.' : 'Hành động này không thể hoàn tác. Dữ liệu sẽ bị xóa vĩnh viễn khỏi két sắt.';
+            document.getElementById('btnCancelDel').innerText = currentLang === 'en' ? 'Cancel' : 'Hủy';
+            document.getElementById('btnConfirmDel').innerText = currentLang === 'en' ? 'Delete' : 'Xóa ngay';
+            
+            document.getElementById('deleteConfirmModal').style.display = 'flex';
+        }
+
+        // Nút "Xóa ngay" màu đỏ trong bảng
+        document.getElementById('btnConfirmDel').addEventListener('click', async function() {
+            if (!recordToDeleteId) return;
+            
+            // Xoay vòng loading cho nó chuyên nghiệp
+            const originalText = this.innerText;
+            this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            this.disabled = true;
+
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/history/${recordToDeleteId}`, { method: 'DELETE' });
+                
+                if (response.ok) {
+                    closeDeleteModal();
+                    const toast = document.getElementById("customToast");
+                    document.getElementById("toastMsg").innerHTML = currentLang === 'en' ? "Record deleted successfully!" : "Đã xóa bệnh án thành công!";
+                    toast.className = "show"; setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
+                    loadHistory(); 
+                } else {
+                    alert("⚠️ Có lỗi xảy ra khi xóa!"); closeDeleteModal();
+                }
+            } catch (error) {
+                alert("⚠️ Không thể kết nối đến Máy chủ!"); closeDeleteModal();
+            } finally {
+                this.innerHTML = originalText; this.disabled = false;
+            }
+        });
+        // ==========================================
+        // --- 4. TÀI KHOẢN (ĐĂNG NHẬP / ĐĂNG KÝ) ---
+        // ==========================================
+        function openModal() { document.getElementById('authModal').style.display = 'flex'; applyLanguage(); }
+        function closeModal() { document.getElementById('authModal').style.display = 'none'; }
+        function toggleAuthForm(type) {
+            const loginForm = document.getElementById('loginForm'); const registerForm = document.getElementById('registerForm');
+            if (type === 'register') { loginForm.style.display = 'none'; registerForm.style.display = 'block'; } 
+            else { loginForm.style.display = 'block'; registerForm.style.display = 'none'; }
+            applyLanguage();
+        }
+
+        async function mockLogin() {
+            try {
+                const inputs = document.querySelectorAll('#loginForm input');
+                const username = inputs[0].value; const password = inputs[1].value;
+                if (!username || !password) { alert(currentLang === 'en' ? "⚠️ Please fill in all fields!" : "⚠️ Vui lòng điền đầy đủ thông tin!"); return; }
+                const formData = new FormData(); formData.append("username", username); formData.append("password", password);
+                const response = await fetch('http://127.0.0.1:8000/login/', { method: 'POST', body: formData });
+                const data = await response.json();
+                if (response.ok) {
+                    localStorage.setItem('currentUser', data.username); closeModal(); 
+                    const loginBtn = document.getElementById('btnLogin');
+                    if (loginBtn) { loginBtn.innerHTML = `<i class="fa-solid fa-user-md"></i> Bs. ${data.fullname}`; loginBtn.style.background = "rgba(0, 229, 255, 0.2)"; loginBtn.style.borderColor = "var(--primary-color)"; loginBtn.onclick = null; }
+                    document.getElementById('btnLogout').style.display = 'inline-block';
+                } else { alert("❌ " + data.detail); }
+            } catch (error) { alert("⚠️ Backend offline!"); }
+        }
+
+        async function mockRegister() {
+            try {
+                const inputs = document.querySelectorAll('#registerForm input');
+                if (!inputs[0].value || !inputs[1].value || !inputs[2].value) { alert("⚠️ Check inputs!"); return; }
+                if (inputs[2].value !== inputs[3].value) { alert("❌ Passwords do not match!"); return; }
+                const formData = new FormData(); formData.append("fullname", inputs[0].value); formData.append("username", inputs[1].value); formData.append("password", inputs[2].value);
+                const response = await fetch('http://127.0.0.1:8000/register/', { method: 'POST', body: formData });
+                const data = await response.json();
+                if (response.ok) { alert("🎉 Success!"); toggleAuthForm('login'); } else { alert("❌ Lỗi: " + data.detail); }
+            } catch (error) { alert("⚠️ Backend offline!"); }
+        }
+
+        function logoutSystem() {
+            const loginBtn = document.getElementById('btnLogin');
+            if(loginBtn) { loginBtn.innerHTML = t('btn-login'); loginBtn.style.background = "transparent"; loginBtn.style.borderColor = "var(--border-color)"; loginBtn.onclick = openModal; localStorage.removeItem('currentUser'); }
+            const logoutBtn = document.getElementById('btnLogout'); if(logoutBtn) logoutBtn.style.display = 'none';
+            document.querySelectorAll('.nav-item')[0].click(); 
+            const toast = document.getElementById("customToast");
+            document.getElementById("toastMsg").innerHTML = currentLang === 'en' ? "Logout successful!<br><span style='font-size:14px;color:var(--text-muted);'>See you again.</span>" : "Đăng xuất thành công!<br><span style='font-size:14px;color:var(--text-muted);'>Hẹn gặp lại Bác sĩ.</span>";
+            toast.className = "show"; setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
+        }
+
+        function parseJwt(token) { var base64Url = token.split('.')[1]; var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/'); var jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) { return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2); }).join('')); return JSON.parse(jsonPayload); }
+        function handleGoogleLogin(response) {
+            const responsePayload = parseJwt(response.credential);
+            localStorage.setItem('currentUser', responsePayload.email);
+            const loginBtn = document.getElementById('btnLogin');
+            if(loginBtn) { loginBtn.innerHTML = `<i class="fa-solid fa-user-doctor"></i> Bs. ${responsePayload.name}`; loginBtn.style.background = "var(--primary-color)"; loginBtn.style.borderColor = "var(--primary-color)"; loginBtn.onclick = null; }
+            closeModal(); document.getElementById('btnLogout').style.display = 'inline-block';
+            const toast = document.getElementById("customToast"); document.getElementById("toastMsg").innerHTML = `Đăng nhập thành công!<br><span style="color: var(--primary-color); font-size: 18px; font-weight: bold;">Bs. ${responsePayload.name}</span>`; toast.className = "show"; setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
+        }
+
+        // ==========================================
+        // --- 5. AI SCAN (QUÉT ẢNH) ---
+        // ==========================================
+        const fileInput = document.getElementById('fileInput'); const preview = document.getElementById('preview'); const uploadText = document.getElementById('uploadText'); const form = document.getElementById('aiForm'); const submitBtn = document.getElementById('submitBtn'); const resultBox = document.getElementById('resultBox');
+        if (fileInput && form) {
+            fileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) { preview.src = URL.createObjectURL(file); preview.style.display = 'block'; uploadText.style.display = 'none'; }
+            });
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                submitBtn.innerHTML = t('scan-loading'); submitBtn.disabled = true; resultBox.style.display = 'none';
+                const formData = new FormData(); formData.append('file', fileInput.files[0]); formData.append('gender', document.getElementById('genderInput').value); formData.append('patient_name', document.getElementById('patientName').value);
+                const currentUser = localStorage.getItem('currentUser'); formData.append('username', currentUser);
+                const aiThreshold = localStorage.getItem('ai_threshold') || 75; formData.append('threshold', aiThreshold);
+                
+                try {
+                    const response = await fetch('http://127.0.0.1:8000/predict/', { method: 'POST', body: formData });
+                    const data = await response.json(); resultBox.style.display = 'block';
+                    
+                    if (data.prediction === "Viêm phổi") {
+                        resultBox.className = "warning"; document.getElementById('resTitle').innerHTML = t('res-sick');
+                        document.getElementById('resAdvice').innerHTML = t('res-adv-sick');
+                    } else {
+                        resultBox.className = "safe"; document.getElementById('resTitle').innerHTML = t('res-ok');
+                        document.getElementById('resAdvice').innerHTML = t('res-adv-ok');
+                    }
+                    document.getElementById('resConfidence').innerText = data.confidence;
+                    
+                    if (data.prediction === "Viêm phổi" && data.heatmap_image) { document.getElementById('heatmapImage').src = data.heatmap_image; document.getElementById('heatmapImage').style.display = 'block'; } else { document.getElementById('heatmapImage').style.display = 'none'; }
+                } catch (error) { alert("Backend offline!"); } finally { submitBtn.innerHTML = t('scan-btn'); submitBtn.disabled = false; }
+            });
+        }
+
+        // ==========================================
+        // --- 6. CÁC NÚT CÀI ĐẶT (SETTINGS) ---
+        // ==========================================
+        const tInputObj = document.getElementById('thresholdInput'); const tValObj = document.getElementById('thresholdVal'); const tDescObj = document.getElementById('thresholdDesc');
+        if (tInputObj) {
+            const savedThreshold = localStorage.getItem('ai_threshold') || 75;
+            tInputObj.value = savedThreshold; tValObj.innerText = savedThreshold + '%';
+            tDescObj.innerText = t('set-1-desc').replace('{val}', savedThreshold);
+            tInputObj.addEventListener('input', (e) => {
+                const val = e.target.value; tValObj.innerText = val + '%';
+                tDescObj.innerText = t('set-1-desc').replace('{val}', val);
+                localStorage.setItem('ai_threshold', val);
+            });
+        }
+
+        function openHospitalModal() { document.getElementById('hospitalModal').style.display = 'flex'; }
+        function closeHospitalModal() { document.getElementById('hospitalModal').style.display = 'none'; }
+        function filterHospitals() {
+            let input = document.getElementById('searchHospital').value.toLowerCase();
+            let items = document.getElementsByClassName('h-item');
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].innerText.toLowerCase().includes(input)) items[i].style.display = "block"; else items[i].style.display = "none";
+            }
+        }
+
+        function exportExcel() {
+            const currentUser = localStorage.getItem('currentUser');
+            if (!currentUser) { alert(currentLang==='en'?"⚠️ Please Login to export reports!":"⚠️ Vui lòng Đăng nhập để trích xuất báo cáo Y tế!"); return; }
+            const toast = document.getElementById("customToast");
+            document.getElementById("toastMsg").innerHTML = currentLang==='en'?"Generating Excel file...":"Đang tạo file Excel...";
+            toast.className = "show"; setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
+            window.location.href = `http://127.0.0.1:8000/export-excel/${currentUser}`;
+        }
+
+        // Khởi động Dịch thuật & Check Login khi load trang
+        applyLanguage();
+        const storedUser = localStorage.getItem('currentUser');
+        if(storedUser) {
+            const loginBtn = document.getElementById('btnLogin');
+            if(loginBtn) { loginBtn.innerHTML = `<i class="fa-solid fa-user-doctor"></i> Bs. ${storedUser.split('@')[0]}`; loginBtn.style.background = "var(--primary-color)"; loginBtn.style.borderColor = "var(--primary-color)"; loginBtn.onclick = null; }
+            document.getElementById('btnLogout').style.display = 'inline-block';
+        }
+    </script>
+</body>
+</html>

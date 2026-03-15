@@ -1,0 +1,13 @@
+# Bỏ qua tập dữ liệu ảnh (quá nặng)
+chest_xray/
+
+# Bỏ qua các file mô hình AI nặng
+backend/*.h5
+backend/*.keras
+backend/*.hdf5
+
+# Bỏ qua database cục bộ (tránh lộ thông tin test)
+backend/medical_records.db
+
+# Bỏ qua bộ nhớ đệm của Python
+__pycache__/

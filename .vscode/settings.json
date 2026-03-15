@@ -1,0 +1,12 @@
+{
+    "liveServer.settings.ignoreFiles": [
+        "**/*.db",
+        "**/*.db-journal",
+        "**/*.db-wal",
+        "**/*.db-shm",
+        "**/*.sqlite3",
+        "**/*.png",
+        "**/*.jpg",
+        "**/__pycache__/**"
+    ]
+}
