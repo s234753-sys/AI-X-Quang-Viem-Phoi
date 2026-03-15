@@ -59,9 +59,4 @@
 
 
 ### Khởi động Máy chủ Backend (Não bộ AI)
-1. Mở Terminal (Command Prompt) tại thư mục dự án.
-2. Đảm bảo đã cài đặt các thư viện cần thiết trong file `requirements.txt`.
-3. Gõ lệnh sau để đánh thức AI:
-   ```bash
-   cd backend
-   uvicorn main:app --reload
+👉 Link đồ án: https://s234753-sys.github.io/AI-X-Quang-Viem-Phoi/frontend/index.html
