@@ -765,6 +765,11 @@
             });
             form.addEventListener('submit', async function(e) {
                 e.preventDefault();
+                // --- CHẶN ẢNH MÀU ---
+        if (!isGrayscale(preview)) {
+            alert("❌ Lỗi: Hình ảnh không hợp lệ! Vui lòng tải lên ảnh chụp X-quang phổi chuẩn (trắng đen).");
+            return; // Dừng lại luôn, không chạy xuống mấy dòng dưới
+        }
                 submitBtn.innerHTML = t('scan-loading'); submitBtn.disabled = true; resultBox.style.display = 'none';
                 const formData = new FormData(); formData.append('file', fileInput.files[0]); formData.append('gender', document.getElementById('genderInput').value); formData.append('patient_name', document.getElementById('patientName').value);
                 const currentUser = localStorage.getItem('currentUser'); formData.append('username', currentUser);
@@ -830,6 +835,30 @@
             if(loginBtn) { loginBtn.innerHTML = `<i class="fa-solid fa-user-doctor"></i> Bs. ${storedUser.split('@')[0]}`; loginBtn.style.background = "var(--primary-color)"; loginBtn.style.borderColor = "var(--primary-color)"; loginBtn.onclick = null; }
             document.getElementById('btnLogout').style.display = 'inline-block';
         }
+    // Hàm kiểm tra xem ảnh có phải ảnh đen trắng (Grayscale) không
+function isGrayscale(imageElement) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = imageElement.width;
+    canvas.height = imageElement.height;
+    ctx.drawImage(imageElement, 0, 0);
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    let totalDiff = 0;
+
+    // Quét qua một số điểm ảnh đại diện (nhảy bước 10 để chạy cho nhanh)
+    for (let i = 0; i < imageData.length; i += 40) {
+        const r = imageData[i];
+        const g = imageData[i + 1];
+        const b = imageData[i + 2];
+        
+        // Tính độ lệch giữa các kênh màu
+        totalDiff += Math.abs(r - g) + Math.abs(g - b) + Math.abs(b - r);
+    }
+
+    // Nếu tổng độ lệch trung bình lớn hơn 5, thì đó là ảnh màu
+    return totalDiff / (imageData.length / 40) < 5;
+}
     </script>
 </body>
 </html>
