@@ -767,9 +767,20 @@
                 e.preventDefault();
                 // --- CHẶN ẢNH MÀU ---
         if (!isGrayscale(preview)) {
-            alert("❌ Lỗi: Hình ảnh không hợp lệ! Vui lòng tải lên ảnh chụp X-quang phổi chuẩn (trắng đen).");
-            return; // Dừng lại luôn, không chạy xuống mấy dòng dưới
-        }
+    const toast = document.getElementById("customToast");
+    const toastMsg = document.getElementById("toastMsg");
+    
+    // Hiện nội dung thông báo lỗi
+    toastMsg.innerHTML = "❌ Hình ảnh không hợp lệ! Vui lòng dùng ảnh X-quang trắng đen.";
+    toast.className = "show";
+    
+    // Tự động ẩn thông báo sau 3 giây
+    setTimeout(function() { 
+        toast.className = toast.className.replace("show", ""); 
+    }, 3000);
+    
+    return; // Dừng lại, không quét ảnh
+}
                 submitBtn.innerHTML = t('scan-loading'); submitBtn.disabled = true; resultBox.style.display = 'none';
                 const formData = new FormData(); formData.append('file', fileInput.files[0]); formData.append('gender', document.getElementById('genderInput').value); formData.append('patient_name', document.getElementById('patientName').value);
                 const currentUser = localStorage.getItem('currentUser'); formData.append('username', currentUser);
