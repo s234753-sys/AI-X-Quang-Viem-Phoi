@@ -161,40 +161,6 @@
         .set-btn.no-hover:hover { transform: none; cursor: default; border-color: var(--border-color); box-shadow: none; background: var(--card-bg); }
         .icon-box { width: 50px; height: 50px; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 24px; margin-bottom: 15px; }
 
-        /* --- PHẦN CSS CHO THÔNG BÁO XỊN --- */
-    #customToast {
-    visibility: hidden; /* Mặc định ẩn */
-    min-width: 300px;
-    background-color: #333; /* Màu nền xám đậm */
-    color: #fff;
-    text-align: left;
-    border-radius: 10px; /* Bo góc */
-    padding: 16px 20px;
-    position: fixed; /* Cố định vị trí */
-    z-index: 9999; /* Luôn nằm trên cùng */
-    left: 20px; /* Góc dưới bên trái */
-    bottom: 20px;
-    font-size: 15px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3); /* Bóng mờ */
-    opacity: 0;
-    transition: opacity 0.4s, bottom 0.4s, visibility 0.4s;
-    display: flex; /* Để icon và chữ nằm ngang */
-    align-items: center;
-}
-
-#customToast.show {
-    visibility: visible;
-    opacity: 1;
-    bottom: 30px; /* Nhích lên xíu khi hiện */
-}
-
-/* Icon dấu X màu đỏ */
-#toastIcon {
-    margin-right: 15px;
-    font-size: 22px;
-    color: #ff4d4d;
-}
-
     </style>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -373,13 +339,6 @@
             </div>
         </div>
     </div>
-    <div id="customToast">
-    <span id="toastIcon">✘</span>
-    <div>
-        <strong style="display:block; margin-bottom: 2px;">Cảnh báo!</strong>
-        <span id="toastMsg">Vui lòng đăng nhập để trích xuất báo cáo.</span>
-    </div>
-</div>
     <div id="hospitalModal" class="modal">
         <div class="modal-content" style="width: 550px; text-align: left; padding: 30px;">
             <span class="close-btn" onclick="closeHospitalModal()" style="top: 10px; right: 15px;">&times;</span>
