@@ -56,6 +56,7 @@
 > Sau khi tải về: 
 > 1. Chép file `vip_pro_pneumonia_DENSENET.keras` vào thư mục `backend/`
 > 2. Chép thư mục `chest_xray` vào thư mục gốc của dự án.
+> 3. Báo cáo bản pdf. 
 
 
 ### Khởi động Máy chủ Backend (Não bộ AI)
